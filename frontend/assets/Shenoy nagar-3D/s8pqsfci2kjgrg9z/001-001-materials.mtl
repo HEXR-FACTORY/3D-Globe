@@ -1,0 +1,9 @@
+newmtl color_1
+Kd 0.75 0.9 0.75
+
+newmtl texture_2
+map_Kd 001-001-basemap.png
+
+newmtl color_3
+Kd 0.8627450980392157 0.8235294117647058 0.7843137254901961
+

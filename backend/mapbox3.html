@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mapbox-gl-js</title>
+
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.11.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.11.0/mapbox-gl.css' rel='stylesheet' />
+
+    <script type="module"
+        src="https://cdn.jsdelivr.net/npm/three@0.117.1/examples/jsm/controls/OrbitControls.js"></script>
+
+    <script
+        src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    <link rel="stylesheet"
+        href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"
+        type="text/css">
+
+    <script
+        src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.js"></script>
+    <link rel="stylesheet"
+        href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.css"
+        type="text/css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <style>
+
+    </style>
+
+    <div id="map"></div>
+    <!-- <input id="search-input" type="text" placeholder="Search location"> -->
+
+    <script type="module">
+        import {
+            BackSide,
+            PCFSoftShadowMap,
+            MeshPhysicalMaterial,
+            TextureLoader,
+            Matrix4,
+            Scene,
+            Camera,
+            PerspectiveCamera,
+            WebGLRenderer,
+            Color,
+            ACESFilmicToneMapping,
+            sRGBEncoding,
+            Mesh,
+            SphereGeometry,
+            MeshBasicMaterial,
+            Vector3,
+            DirectionalLight,
+            Clock,
+            Raycaster,
+            FileLoader,
+        } from "https://cdn.skypack.dev/three@0.137";
+        import { OrbitControls } from "https://cdn.skypack.dev/three-stdlib@2.8.5/controls/OrbitControls";
+        import anime from 'https://cdn.skypack.dev/animejs@3.2.1';
+        import { GLTFLoader } from "https://cdn.skypack.dev/three-stdlib@2.8.5/loaders/GLTFLoader";
+
+        // mapbox token
+        mapboxgl.accessToken = 'pk.eyJ1Ijoic2Fpc2l2YXNhbmthciIsImEiOiJjbHF3OXRjdGYwMHJzMnFxcTg3d2lvcjhmIn0.HBKYuuBf6eYAbCm5ETIlCg';
+
+        // Map Creation
+        const map = new mapboxgl.Map({
+            container: 'map', // container ID
+            style: 'mapbox://styles/mapbox/streets-v12', // style URL
+            center: [80.22697887605354, 13.078395070909325], // starting position [lng, lat]
+            zoom: 17.25, // starting zoom,
+            pitch: 40, // starting pitch
+            bearing: -5,// starting bearing
+            // hash:true,
+            // keyboard:true,
+            // bearingSnap:7,
+            // boxZoom:true,
+            attributionControl: false,
+
+
+        });
+
+        // map.setMinZoom(2.25);
+        map.setMaxZoom(19.25);
+        // map.showTileBoundaries = true;
+
+        // to view coordinates
+        map.on('click', function (e) {
+            var clickedCoordinates = e.lngLat;
+            console.log(`'Clicked coordinates - Lon :${clickedCoordinates.lng} & Lat :${clickedCoordinates.lat}`)
+        });
+
+
+
+        // Add Attribution control to the map.
+        var attributionControl = new mapboxgl.AttributionControl({
+            customAttribution: 'Map design by - SIVA'
+        })
+        map.addControl(attributionControl);
+
+        // Add fullScreen control to the map.
+        var fullScreen = new mapboxgl.FullscreenControl({ container: document.querySelector('body') })
+        map.addControl(fullScreen, 'bottom-right');
+
+        // Add search control to the map.
+        // var search = new MapboxGeocoder({
+        //     accessToken: mapboxgl.accessToken,
+        //     mapboxgl: mapboxgl
+        // })
+        // map.addControl(search, 'bottom-left');
+
+
+        // Add scale control to the map.
+        const scale = new mapboxgl.ScaleControl({
+            maxWidth: 80,
+            unit: 'imperial'
+        });
+        map.addControl(scale);
+        scale.setUnit('metric');
+
+        // Add nav and zoom control in MAP
+        var nav = new mapboxgl.NavigationControl({
+            visualizePitch: true,
+            // showZoom:true,
+            // showCompass:true
+        });
+        map.addControl(nav, 'top-right');
+
+        // Add my location control in MAP
+        var geolocate = new mapboxgl.GeolocateControl({
+            positionOptions: {
+                enableHighAccuracy: true
+            },
+            trackUserLocation: true,
+            showUserHeading: true
+        });
+        map.addControl(geolocate, 'top-right');
+
+        // Add Direction Control in Map
+        var direction = new MapboxDirections({
+            accessToken: mapboxgl.accessToken,
+            styles: [
+                {
+                    'id': 'directions-route-line-alt',
+                    'type': 'line',
+                    'source': 'directions',
+                    'layout': {
+                        'line-cap': 'round',
+                        'line-join': 'round'
+                    },
+                    'paint': {
+                        'line-color': 'black',
+                        'line-width': 4
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'LineString'],
+                        ['in', 'route', 'alternate']
+                    ]
+                }, {
+                    'id': 'directions-route-line-casing',
+                    'type': 'line',
+                    'source': 'directions',
+                    'layout': {
+                        'line-cap': 'round',
+                        'line-join': 'round'
+                    },
+                    'paint': {
+                        'line-color': 'black',
+                        'line-width': 12
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'LineString'],
+                        ['in', 'route', 'selected']
+                    ]
+                }, {
+                    'id': 'directions-route-line',
+                    'type': 'line',
+                    'source': 'directions',
+                    'layout': {
+                        'line-cap': 'butt',
+                        'line-join': 'round'
+                    },
+                    'paint': {
+                        'line-color': {
+                            'property': 'congestion',
+                            'type': 'categorical',
+                            'default': 'black',
+                            'stops': [
+                                ['unknown', '#4882c5'],
+                                ['low', '#4882c5'],
+                                ['moderate', '#f09a46'],
+                                ['heavy', '#e34341'],
+                                ['severe', '#8b2342']
+                            ]
+                        },
+                        'line-width': 7
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'LineString'],
+                        ['in', 'route', 'selected']
+                    ]
+                }, {
+                    'id': 'directions-hover-point-casing',
+                    'type': 'circle',
+                    'source': 'directions',
+                    'paint': {
+                        'circle-radius': 8,
+                        'circle-color': '#fff'
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'Point'],
+                        ['in', 'id', 'hover']
+                    ]
+                }, {
+                    'id': 'directions-hover-point',
+                    'type': 'circle',
+                    'source': 'directions',
+                    'paint': {
+                        'circle-radius': 6,
+                        'circle-color': '#3bb2d0'
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'Point'],
+                        ['in', 'id', 'hover']
+                    ]
+                }, {
+                    'id': 'directions-waypoint-point-casing',
+                    'type': 'circle',
+                    'source': 'directions',
+                    'paint': {
+                        'circle-radius': 8,
+                        'circle-color': '#fff'
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'Point'],
+                        ['in', 'id', 'waypoint']
+                    ]
+                }, {
+                    'id': 'directions-waypoint-point',
+                    'type': 'circle',
+                    'source': 'directions',
+                    'paint': {
+                        'circle-radius': 6,
+                        'circle-color': '#8a8bc9'
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'Point'],
+                        ['in', 'id', 'waypoint']
+                    ]
+                }, {
+                    'id': 'directions-origin-point',
+                    'type': 'circle',
+                    'source': 'directions',
+                    'paint': {
+                        'circle-radius': 18,
+                        'circle-color': '#3bb2d0'
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'Point'],
+                        ['in', 'marker-symbol', 'A']
+                    ]
+                }, {
+                    'id': 'directions-origin-label',
+                    'type': 'symbol',
+                    'source': 'directions',
+                    'layout': {
+                        'text-field': 'A',
+                        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                        'text-size': 12
+                    },
+                    'paint': {
+                        'text-color': '#fff'
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'Point'],
+                        ['in', 'marker-symbol', 'A']
+                    ]
+                }, {
+                    'id': 'directions-destination-point',
+                    'type': 'circle',
+                    'source': 'directions',
+                    'paint': {
+                        'circle-radius': 18,
+                        'circle-color': '#8a8bc9'
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'Point'],
+                        ['in', 'marker-symbol', 'B']
+                    ]
+                }, {
+                    'id': 'directions-destination-label',
+                    'type': 'symbol',
+                    'source': 'directions',
+                    'layout': {
+                        'text-field': 'B',
+                        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                        'text-size': 12
+                    },
+                    'paint': {
+                        'text-color': '#fff'
+                    },
+                    'filter': [
+                        'all',
+                        ['in', '$type', 'Point'],
+                        ['in', 'marker-symbol', 'B']
+                    ]
+                }]
+        })
+        map.addControl(direction, 'top-left');
+
+
+
+        // Create a Three.js scene
+        const scene = new Scene();
+
+        // Load a 3D model (replace 'path/to/your/model.gltf' with the actual path to your 3D model file)
+        // const loader = new GLTFLoader();
+        // let model;
+
+        // loader.load('assets/road/scene.gltf', (gltf) => {
+        //     console.log(gltf)
+        //     model = gltf.scene;
+        //     model.scale.set(0.1, 0.1, 0.1);
+        //     scene.add(model);
+        // });
+
+        // Create a Three.js camera
+        const camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 20;
+
+        // Create a WebGLRenderer
+        const renderer = new WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+
+        var startCoordinates = null;
+        var destinationCoordinates = null;
+
+        map.on('click', (e) => {
+            // var clickedCoordinates = e.lngLat;
+            // console.log(clickedCoordinates);
+            if (!startCoordinates) {
+                startCoordinates = e.lngLat.toArray(); // Set start coordinates on first click
+            } else if (!destinationCoordinates) {
+                destinationCoordinates = e.lngLat.toArray(); // Set destination coordinates on second click
+                // Add a source and layer for the route line
+                map.addSource('route', {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'Feature',
+                        'properties': {},
+                        'geometry': {
+                            'type': 'LineString',
+                            'coordinates': [startCoordinates, destinationCoordinates]
+                        }
+                    }
+                });
+
+                map.addLayer({
+                    'id': 'route',
+                    'type': 'line',
+                    'source': 'route',
+                    'layout': {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    'paint': {
+                        'line-color': 'black',
+                        'line-width': 8
+                    }
+                });
+                // Display 3D model for the route
+                display3DModelAlongRoute([startCoordinates, destinationCoordinates]);
+            }
+        });
+
+        function display3DModelAlongRoute(routeCoordinates) {
+            var loader = new GLTFLoader();
+            loader.load('assets/road/scene.gltf', function (gltf) {
+                console.log(gltf)
+                var model = gltf.scene;
+                console.log(model)
+                model.scale.set(0.1, 0.1, 0.1); // Adjust the scale as needed
+
+                // Create a LineString feature for the route
+                var routeFeature = {
+                    'type': 'Feature',
+                    'properties': {},
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': routeCoordinates
+                    }
+                };
+
+
+                // Add the route feature to the map
+                map.getSource('route').setData(routeFeature);
+
+                // Set the model's position to the start coordinates
+                model.position.set(routeCoordinates[0][0], routeCoordinates[0][1], 0);
+                // Add the model to the scene
+                map.on('style.load', function () {
+                    map.addLayer({
+                        'id': '3d-model',
+                        'type': 'custom',
+                        'renderingMode': '3d',
+                        'onAdd': function (map, mbxContext) {
+                            mbxContext.renderer.autoClear = false;
+                        },
+                        'render': function (gl, matrix) {
+                            map.triggerRepaint();
+                        }
+                    });
+                });
+
+
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+            animate();
+
+        }
+
+    </script>
+</body>
+
+</html>
